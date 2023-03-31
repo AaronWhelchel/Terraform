@@ -5,6 +5,12 @@ terraform {
       version = "4.60.0"
     }
   }
+
+backend "s3" {
+  bucket = "team-spice-girls-1"
+  key = "terraform.tfstate"
+  region = "us-east-1"
+}
 }
 provider "aws" {
   region = "us-east-1"
@@ -22,7 +28,7 @@ resource "aws_vpc" "main" {
   }
 }
 # Public subnets 10.0.0.0/24
-resource "aws_subnet" "Public" {
+resource "aws_subnet" "public" {
   count                   = var.public_subnet_count
   vpc_id                  = aws_vpc.main.id
   cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
@@ -56,7 +62,7 @@ resource "aws_eip" "NAT_EIP" {
 # NGW
 resource "aws_nat_gateway" "main_NAT" {
   allocation_id = aws_eip.NAT_EIP.id
-  subnet_id = aws_subnet.Public.0.id
+  subnet_id = aws_subnet.public.0.id
   tags = {
     "Name" = "${var.default_tags.env}-NGW"
   }
@@ -77,7 +83,7 @@ resource "aws_route" "Public" {
 # Public Route Table Association
 resource "aws_route_table_association" "Public" {
   count = var.public_subnet_count
-  subnet_id = element(aws_subnet.Public.*.id, count.index)
+  subnet_id = element(aws_subnet.public.*.id, count.index)
   route_table_id = aws_route_table.Public.id
 }
 # Private Route Table
